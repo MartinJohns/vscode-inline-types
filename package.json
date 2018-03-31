@@ -1,0 +1,51 @@
+{
+  "name": "inline-types",
+  "description": "A Visual Studio Code extension to render inferred types in TypeScript documents.",
+  "author": "Martin Johns",
+  "license": "MIT",
+  "version": "0.1.0",
+  "publisher": "MartinJohns",
+  "engines": {
+    "vscode": "^1.20.0"
+  },
+  "activationEvents": [
+    "onLanguage:typescript"
+  ],
+  "main": "./out/src/extension",
+  "scripts": {
+    "vscode:prepublish": "npm run clean && npm install && npm run compile",
+    "clean": "rm -rf out/ node_modules/ *.vsix",
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "update-vscode": "node ./node_modules/vscode/bin/install",
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "prerelease": "vsce package",
+    "release": "standard-version"
+  },
+  "dependencies": {
+    "chalk": "2.3.2",
+    "typescript": "2.8.1",
+    "vscode": "1.1.14"
+  },
+  "devDependencies": {
+    "@types/chalk": "2.2.0",
+    "@types/node": "9.6.1",
+    "cz-conventional-changelog": "2.1.0",
+    "standard-version": "4.3.0",
+    "vsce": "1.37.6"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MartinJohns/vscode-inline-types"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "standard-version": {
+    "scripts": {
+      "postbump": "vsce package"
+    }
+  }
+}
