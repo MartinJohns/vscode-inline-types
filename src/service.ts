@@ -99,6 +99,9 @@ function getDecorations(
         } else if (ts.isFunctionDeclaration(node) && !node.type && context.configuration.features.functionReturnType) {
             const signature = typeChecker.getSignatureFromDeclaration(node);
             result.push(getDecoration(sourceFile!, typeChecker, node, node.body, signature && signature.getReturnType()));
+        } else if (ts.isMethodDeclaration(node) && !node.type && context.configuration.features.functionReturnType) {
+            const signature = typeChecker.getSignatureFromDeclaration(node);
+            result.push(getDecoration(sourceFile!, typeChecker, node, node.body, signature && signature.getReturnType()));
         } else if (ts.isArrowFunction(node) && !node.type && context.configuration.features.functionReturnType) {
             const signature = typeChecker.getSignatureFromDeclaration(node);
             result.push(getDecoration(sourceFile!, typeChecker, node, node.equalsGreaterThanToken, signature && signature.getReturnType(), true));
