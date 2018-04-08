@@ -101,26 +101,27 @@ function getDecorations(
     }
 
     const typeChecker = context.getTypeChecker();
+    const configuration = context.configuration;
     const result: Decoration[] = [];
     aux(sourceFile);
     return result;
 
     function aux(node: ts.Node): void {
         if (ts.isVariableDeclaration(node) && !node.type && context.configuration.features.variableType) {
-            result.push(getDecoration(sourceFile!, typeChecker, node.name))
+            result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name))
         } else if (ts.isPropertySignature(node) && !node.type && context.configuration.features.propertyType) {
-            result.push(getDecoration(sourceFile!, typeChecker, node.name))
+            result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name))
         } else if (ts.isParameter(node) && !node.type && context.configuration.features.functionParameterType) {
-            result.push(getDecoration(sourceFile!, typeChecker, node.name))
+            result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name))
         } else if (ts.isFunctionDeclaration(node) && !node.type && context.configuration.features.functionReturnType) {
             const signature = typeChecker.getSignatureFromDeclaration(node);
-            result.push(getDecoration(sourceFile!, typeChecker, node, node.body, signature && signature.getReturnType()));
+            result.push(getDecoration(sourceFile!, typeChecker, configuration, node, node.body, signature && signature.getReturnType()));
         } else if (ts.isMethodDeclaration(node) && !node.type && context.configuration.features.functionReturnType) {
             const signature = typeChecker.getSignatureFromDeclaration(node);
-            result.push(getDecoration(sourceFile!, typeChecker, node, node.body, signature && signature.getReturnType()));
+            result.push(getDecoration(sourceFile!, typeChecker, configuration, node, node.body, signature && signature.getReturnType()));
         } else if (ts.isArrowFunction(node) && !node.type && context.configuration.features.functionReturnType) {
             const signature = typeChecker.getSignatureFromDeclaration(node);
-            result.push(getDecoration(sourceFile!, typeChecker, node, node.equalsGreaterThanToken, signature && signature.getReturnType(), true));
+            result.push(getDecoration(sourceFile!, typeChecker, configuration, node, node.equalsGreaterThanToken, signature && signature.getReturnType(), true));
         } else if (ts.isCallExpression(node) && node.arguments.length > 0 && context.configuration.features.parameterName) {
             const resolvedSignature = typeChecker.getResolvedSignature(node);
             for (let i = 0; i < node.arguments.length; ++i) {
@@ -133,7 +134,8 @@ function getDecorations(
                             textBefore: `${parameterName}: `,
                             textAfter: '',
                             startPosition: sourceFile!.getLineAndCharacterOfPosition(argument.pos + argument.getLeadingTriviaWidth()),
-                            endPosition: sourceFile!.getLineAndCharacterOfPosition(argument.end)
+                            endPosition: sourceFile!.getLineAndCharacterOfPosition(argument.end),
+                            isWarning: false
                         });
                     }
                 }
@@ -147,6 +149,7 @@ function getDecorations(
 function getDecoration(
     sourceFile: ts.SourceFile,
     typeChecker: ts.TypeChecker,
+    configuration: Configuration,
     node: ts.Node,
     endNode: ts.Node | undefined = undefined,
     type: ts.Type = typeChecker.getTypeAtLocation(node),
@@ -159,8 +162,9 @@ function getDecoration(
     const textAfter = (wrap ? ')' : '') + ': ' + typeName;
     const startPosition = sourceFile.getLineAndCharacterOfPosition(node.pos + leadingTriviaWidth);
     const endPosition = sourceFile.getLineAndCharacterOfPosition(endNode ? endNode.pos : node.end);
+    const isWarning = configuration.features.highlightAny && typeName === 'any';
 
-    return { textBefore, textAfter, startPosition, endPosition };
+    return { textBefore, textAfter, startPosition, endPosition, isWarning };
 }
 
 function notifyDocumentChange(

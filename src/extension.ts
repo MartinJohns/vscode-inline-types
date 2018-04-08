@@ -80,14 +80,15 @@ function updateDecorations(
 }
 
 function createDecorationOptions(decoration: Decoration): vscode.DecorationOptions {
-    const textDecoration = `none; opacity: 0.5`;
+    const textDecoration = decoration.isWarning ? undefined : `none; opacity: 0.5`;
+    const color = decoration.isWarning === true ? '#FF2400' : undefined;
     const startPosition = mapServicePosition(decoration.startPosition);
     const endPosition = mapServicePosition(decoration.endPosition);
     return {
         range: new vscode.Range(startPosition, endPosition),
         renderOptions: {
-            before: { contentText: decoration.textBefore, textDecoration },
-            after: { contentText: decoration.textAfter, textDecoration }
+            before: { contentText: decoration.textBefore, textDecoration, color },
+            after: { contentText: decoration.textAfter, textDecoration, color }
         }
     };
 }

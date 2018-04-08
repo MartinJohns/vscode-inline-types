@@ -8,6 +8,7 @@ export interface Decoration {
     readonly textAfter: string;
     readonly startPosition: Position;
     readonly endPosition: Position;
+    readonly isWarning: boolean;
 }
 
 export interface TextChange {
@@ -35,6 +36,7 @@ export type FeatureType =
     | 'functionParameterType'
     | 'propertyType'
     | 'parameterName'
+    | 'highlightAny'
 
 export interface Configuration {
     readonly features: { readonly [P in FeatureType]: boolean };

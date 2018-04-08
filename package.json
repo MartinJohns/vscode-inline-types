@@ -78,6 +78,11 @@
           "default": true,
           "description": "Render the names of parameters in function calls."
         },
+        "inlineTypes.features.highlightAny": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render an inferred 'any' type with a warning color."
+        },
         "inlineTypes.updateDelay": {
           "type": "integer",
           "default": 0,
