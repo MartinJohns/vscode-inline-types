@@ -119,7 +119,7 @@ function getDecoration(
     type: ts.Type = typeChecker.getTypeAtLocation(node),
     wrap: boolean = false
 ): Decoration {
-    const typeName = typeChecker.typeToString(type);
+    const typeName = typeChecker.typeToString(type, node.parent, ts.TypeFormatFlags.UseFullyQualifiedType);
     const leadingTriviaWidth = node.getLeadingTriviaWidth();
 
     const textBefore = wrap ? '(' : '';
