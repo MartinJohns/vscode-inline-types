@@ -122,7 +122,7 @@ function getDecorations(
         } else if (ts.isArrowFunction(node) && !node.type && context.configuration.features.functionReturnType) {
             const signature = typeChecker.getSignatureFromDeclaration(node);
             result.push(getDecoration(sourceFile!, typeChecker, configuration, node, node.equalsGreaterThanToken, signature && signature.getReturnType(), true));
-        } else if (ts.isCallExpression(node) && node.arguments.length > 0 && context.configuration.features.parameterName) {
+        } else if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && node.arguments && node.arguments.length > 0 && context.configuration.features.parameterName) {
             const resolvedSignature = typeChecker.getResolvedSignature(node);
             for (let i = 0; i < node.arguments.length; ++i) {
                 const argument = node.arguments[i];
