@@ -47,5 +47,38 @@
     "scripts": {
       "postbump": "vsce package"
     }
+  },
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "inline-types extension configuration",
+      "properties": {
+        "inlineTypes.features.variableType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render the type of variables."
+        },
+        "inlineTypes.features.functionReturnType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render the return type of functions."
+        },
+        "inlineTypes.features.functionParameterType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render the type of function parameters."
+        },
+        "inlineTypes.features.propertyType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render the type of properties."
+        },
+        "inlineTypes.features.parameterName": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render the names of parameters in function calls."
+        }
+      }
+    }
   }
 }

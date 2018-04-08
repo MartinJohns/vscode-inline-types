@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { error as logError, info as logInfo } from './log';
 import { createService } from './service';
-import { FileChangeTypes, Decoration, TextChange, Position, Service } from './types';
+import { FileChangeTypes, Decoration, TextChange, Position, Service, Configuration, Disposable } from './types';
 
 export function activate(extensionContext: vscode.ExtensionContext): void {
     const rootPath = vscode.workspace.rootPath;
@@ -11,22 +11,56 @@ export function activate(extensionContext: vscode.ExtensionContext): void {
         return;
     }
 
-    const decorationType: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({});
-    extensionContext.subscriptions.push(decorationType);
+    const subscriptions: Disposable[] = [];
+    function dispose(): void {
+        let nextSubscription: Disposable | undefined;;
+        while ((nextSubscription = subscriptions.pop()) !== undefined) {
+            nextSubscription.dispose();
+        }
+    }
+    extensionContext.subscriptions.push({ dispose });
 
-    const service = createService(rootPath, () => updateDecorations(decorationType, service));
+    createServiceForExtension(rootPath, subscriptions);
+    extensionContext.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('inlineTypes')) {
+            dispose();
+            createServiceForExtension(rootPath, subscriptions);
+        }
+    }));
+}
+
+function createServiceForExtension(
+    rootPath: string,
+    subscriptions: Disposable[]
+): Service {
+    const decorationType: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType({});
+    subscriptions.push(decorationType);
+
+    const configuration: Configuration = mapConfiguration(vscode.workspace.getConfiguration('inlineTypes'));
+    const service = createService(
+        rootPath,
+        configuration,
+        () => updateDecorations(decorationType, service));
     updateDecorations(decorationType, service);
 
     const fileWatcher = vscode.workspace.createFileSystemWatcher('{!node_modules,**}/*.ts');
     fileWatcher.onDidCreate(e => service.notifyFileChange(normalizeFileName(e.fsPath), FileChangeTypes.Created));
     fileWatcher.onDidChange(e => service.notifyFileChange(normalizeFileName(e.fsPath), FileChangeTypes.Changed));
     fileWatcher.onDidDelete(e => service.notifyFileChange(normalizeFileName(e.fsPath), FileChangeTypes.Deleted));
-    extensionContext.subscriptions.push(fileWatcher);
+    subscriptions.push(fileWatcher);
 
     vscode.window.onDidChangeActiveTextEditor(() => updateDecorations(decorationType, service));
     vscode.workspace.onDidChangeTextDocument(e => service.notifyDocumentChange(
         normalizeFileName(e.document.fileName),
         e.contentChanges.map(mapContentChange)));
+
+    return service;
+}
+
+function mapConfiguration(configuration: vscode.WorkspaceConfiguration): Configuration {
+    return {
+        features: configuration.features
+    };
 }
 
 function updateDecorations(

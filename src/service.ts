@@ -3,7 +3,7 @@ import { join as joinPath } from 'path';
 
 import { throwError, isUndefined, assertNever, curry, isRestParameter } from './utils';
 import { error as logError, info as logInfo } from './log';
-import { TextChange, Service, FileChangeType, FileChangeTypes, Decoration, Position } from './types';
+import { TextChange, Service, FileChangeType, FileChangeTypes, Decoration, Position, Configuration } from './types';
 
 class SourceFilesCache extends Map<string, ts.SourceFile> {
     public constructor() {
@@ -13,6 +13,7 @@ class SourceFilesCache extends Map<string, ts.SourceFile> {
 
 interface ServiceContext {
     readonly rootPath: string;
+    readonly configuration: Configuration;
     readonly sourceFilesCache: SourceFilesCache;
     readonly updateProgram: () => void;
     readonly getProgram: () => ts.Program;
@@ -21,8 +22,12 @@ interface ServiceContext {
     readonly getRootFileNames: () => ReadonlyArray<string>;
 }
 
-export function createService(rootPath: string, onUpdate: () => void): Service {
-    const context = createServiceContext(rootPath, onUpdate);
+export function createService(
+    rootPath: string,
+    configuration: Configuration,
+    onUpdate: () => void
+): Service {
+    const context = createServiceContext(rootPath, configuration, onUpdate);
 
     return {
         getDecorations: curry(getDecorations, context),
@@ -31,11 +36,16 @@ export function createService(rootPath: string, onUpdate: () => void): Service {
     };
 }
 
-function createServiceContext(rootPath: string, onUpdate: () => void): ServiceContext {
+function createServiceContext(
+    rootPath: string,
+    configuration: Configuration,
+    onUpdate: () => void
+): ServiceContext {
     const sourceFilesCache = new SourceFilesCache();
     let program: ts.Program = createProgram(rootPath, sourceFilesCache);
     const context: ServiceContext = {
         rootPath,
+        configuration,
         sourceFilesCache,
         updateProgram: () => updateProgram(() => context, newProgram => program = newProgram, onUpdate),
         getProgram: () => program,
@@ -80,15 +90,19 @@ function getDecorations(
     return result;
 
     function aux(node: ts.Node): void {
-        if ((ts.isVariableDeclaration(node) || ts.isPropertySignature(node) || ts.isParameter(node)) && !node.type) {
+        if (ts.isVariableDeclaration(node) && !node.type && context.configuration.features.variableType) {
             result.push(getDecoration(sourceFile!, typeChecker, node.name))
-        } else if (ts.isFunctionDeclaration(node) && !node.type) {
+        } else if (ts.isPropertySignature(node) && !node.type && context.configuration.features.propertyType) {
+            result.push(getDecoration(sourceFile!, typeChecker, node.name))
+        } else if (ts.isParameter(node) && !node.type && context.configuration.features.functionParameterType) {
+            result.push(getDecoration(sourceFile!, typeChecker, node.name))
+        } else if (ts.isFunctionDeclaration(node) && !node.type && context.configuration.features.functionReturnType) {
             const signature = typeChecker.getSignatureFromDeclaration(node);
             result.push(getDecoration(sourceFile!, typeChecker, node, node.body, signature && signature.getReturnType()));
-        } else if (ts.isArrowFunction(node) && !node.type) {
+        } else if (ts.isArrowFunction(node) && !node.type && context.configuration.features.functionReturnType) {
             const signature = typeChecker.getSignatureFromDeclaration(node);
             result.push(getDecoration(sourceFile!, typeChecker, node, node.equalsGreaterThanToken, signature && signature.getReturnType(), true));
-        } else if (ts.isCallExpression(node) && node.arguments.length > 0) {
+        } else if (ts.isCallExpression(node) && node.arguments.length > 0 && context.configuration.features.parameterName) {
             const resolvedSignature = typeChecker.getResolvedSignature(node);
             for (let i = 0; i < node.arguments.length; ++i) {
                 const argument = node.arguments[i];

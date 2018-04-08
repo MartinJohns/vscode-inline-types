@@ -28,3 +28,18 @@ export interface Service {
     notifyFileChange(fileName: string, fileChangeType: FileChangeType): void;
     getDecorations(fileName: string): ReadonlyArray<Decoration>;
 }
+
+export type FeatureType =
+    | 'variableType'
+    | 'functionReturnType'
+    | 'functionParameterType'
+    | 'propertyType'
+    | 'parameterName'
+
+export interface Configuration {
+    readonly features: { readonly [P in FeatureType]: boolean };
+}
+
+export interface Disposable {
+    dispose(): any;
+}
