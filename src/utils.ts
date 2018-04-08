@@ -1,3 +1,5 @@
+import * as ts from 'typescript';
+
 import * as log from './log';
 
 export function assertNever(x: never): never {
@@ -11,6 +13,13 @@ export function isUndefined<T>(value: T | undefined): value is undefined {
 export function throwError(message: string): never {
     log.error(message);
     throw new Error(message);
+}
+
+export function isRestParameter(parameter: ts.Symbol): boolean {
+    return !!(
+        parameter.valueDeclaration
+        && ts.isParameter(parameter.valueDeclaration)
+        && parameter.valueDeclaration.dotDotDotToken);
 }
 
 export function curry<TR, T1>(                                func: (_1: T1) => TR,                                                                 _1: T1): () => TR;

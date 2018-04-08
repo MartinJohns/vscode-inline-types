@@ -1,7 +1,7 @@
 import * as ts from 'typescript';
 import { join as joinPath } from 'path';
 
-import { throwError, isUndefined, assertNever, curry } from './utils';
+import { throwError, isUndefined, assertNever, curry, isRestParameter } from './utils';
 import { error as logError, info as logInfo } from './log';
 import { TextChange, Service, FileChangeType, FileChangeTypes, Decoration, Position } from './types';
 
@@ -88,6 +88,23 @@ function getDecorations(
         } else if (ts.isArrowFunction(node) && !node.type) {
             const signature = typeChecker.getSignatureFromDeclaration(node);
             result.push(getDecoration(sourceFile!, typeChecker, node, node.equalsGreaterThanToken, signature && signature.getReturnType(), true));
+        } else if (ts.isCallExpression(node) && node.arguments.length > 0) {
+            const resolvedSignature = typeChecker.getResolvedSignature(node);
+            for (let i = 0; i < node.arguments.length; ++i) {
+                const argument = node.arguments[i];
+                const parameter = resolvedSignature.parameters[i];
+                if (parameter) {
+                    const parameterName = (isRestParameter(parameter) ? '...' : '') + parameter.name;
+                    if (parameterName !== argument.getText()) {
+                        result.push({
+                            textBefore: `${parameterName}: `,
+                            textAfter: '',
+                            startPosition: sourceFile!.getLineAndCharacterOfPosition(argument.pos + argument.getLeadingTriviaWidth()),
+                            endPosition: sourceFile!.getLineAndCharacterOfPosition(argument.end)
+                        });
+                    }
+                }
+            }
         }
 
         node.forEachChild(aux);
