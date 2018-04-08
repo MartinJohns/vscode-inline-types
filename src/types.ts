@@ -38,6 +38,7 @@ export type FeatureType =
 
 export interface Configuration {
     readonly features: { readonly [P in FeatureType]: boolean };
+    readonly updateDelay: number;
 }
 
 export interface Disposable {

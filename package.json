@@ -77,6 +77,12 @@
           "type": "boolean",
           "default": true,
           "description": "Render the names of parameters in function calls."
+        },
+        "inlineTypes.updateDelay": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "description": "A delay for propagating decoration updates to the editor in milliseconds."
         }
       }
     }

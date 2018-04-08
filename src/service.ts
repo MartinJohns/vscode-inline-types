@@ -27,12 +27,28 @@ export function createService(
     configuration: Configuration,
     onUpdate: () => void
 ): Service {
-    const context = createServiceContext(rootPath, configuration, onUpdate);
+    const context = createServiceContext(
+        rootPath,
+        configuration,
+        getDelayedOnUpdate(configuration.updateDelay, onUpdate));
 
     return {
         getDecorations: curry(getDecorations, context),
         notifyFileChange: curry(notifyFileChange, context),
         notifyDocumentChange: curry(notifyDocumentChange, context)
+    };
+}
+
+function getDelayedOnUpdate(delay: number, onUpdate: () => void): () => void {
+    if (delay === 0) { return onUpdate; }
+
+    let updateTimeout: NodeJS.Timer | undefined = undefined;
+    return () => {
+        if (updateTimeout !== undefined) {
+            clearTimeout(updateTimeout);
+        }
+
+        updateTimeout = setTimeout(onUpdate, delay);
     };
 }
 

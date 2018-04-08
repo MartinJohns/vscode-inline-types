@@ -59,7 +59,8 @@ function createServiceForExtension(
 
 function mapConfiguration(configuration: vscode.WorkspaceConfiguration): Configuration {
     return {
-        features: configuration.features
+        features: configuration.features,
+        updateDelay: configuration.updateDelay
     };
 }
 
