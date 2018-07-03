@@ -89,6 +89,26 @@
           "default": 0,
           "minimum": 0,
           "description": "A delay for propagating decoration updates to the editor in milliseconds."
+        },
+        "inlineTypes.decorationStyle": {
+          "type": "object",
+          "description": "Style used for the decorations.",
+          "properties": {
+            "opacity": {
+              "type": "number",
+              "description": "Opacity used for the decoration.",
+              "default": 0.5
+            },
+            "color": {
+              "type": "string",
+              "description": "The color used for the decoration."
+            },
+            "warnColor": {
+              "type": "string",
+              "description": "The color used for warning decorations.",
+              "default": "#FF2400"
+            }
+          }
         }
       }
     }

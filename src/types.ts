@@ -41,6 +41,13 @@ export type FeatureType =
 export interface Configuration {
     readonly features: { readonly [P in FeatureType]: boolean };
     readonly updateDelay: number;
+    readonly decorationStyle: DecorationStyle;
+}
+
+export interface DecorationStyle {
+    readonly opacity: number;
+    readonly color: string;
+    readonly warnColor: string;
 }
 
 export interface Disposable {

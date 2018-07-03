@@ -40,8 +40,8 @@ function createServiceForExtension(
     const service = createService(
         rootPath,
         configuration,
-        () => updateDecorations(decorationType, service));
-    updateDecorations(decorationType, service);
+        () => updateDecorations(decorationType, service, configuration));
+    updateDecorations(decorationType, service, configuration);
 
     const fileWatcher = vscode.workspace.createFileSystemWatcher('{!node_modules,**}/*.ts');
     fileWatcher.onDidCreate(e => service.notifyFileChange(normalizeFileName(e.fsPath), FileChangeTypes.Created));
@@ -49,7 +49,7 @@ function createServiceForExtension(
     fileWatcher.onDidDelete(e => service.notifyFileChange(normalizeFileName(e.fsPath), FileChangeTypes.Deleted));
     subscriptions.push(fileWatcher);
 
-    vscode.window.onDidChangeActiveTextEditor(() => updateDecorations(decorationType, service));
+    vscode.window.onDidChangeActiveTextEditor(() => updateDecorations(decorationType, service, configuration));
     vscode.workspace.onDidChangeTextDocument(e => service.notifyDocumentChange(
         normalizeFileName(e.document.fileName),
         e.contentChanges.map(mapContentChange)));
@@ -60,13 +60,15 @@ function createServiceForExtension(
 function mapConfiguration(configuration: vscode.WorkspaceConfiguration): Configuration {
     return {
         features: configuration.features,
-        updateDelay: configuration.updateDelay
+        updateDelay: configuration.updateDelay,
+        decorationStyle: configuration.decorationStyle
     };
 }
 
 function updateDecorations(
     decorationType: vscode.TextEditorDecorationType,
-    service: Service
+    service: Service,
+    configuration: Configuration
 ): void {
     const visibleTextEditors = vscode.window.visibleTextEditors.filter(isTypeScript);
     for (const visibleTextEditor of visibleTextEditors) {
@@ -74,14 +76,16 @@ function updateDecorations(
 
         const fileName = visibleTextEditor.document.fileName;
         const decorations = service.getDecorations(normalizeFileName(fileName));
-        const decorationOptions = decorations.map(createDecorationOptions);
+        const decorationOptions = decorations.map(d => createDecorationOptions(d, configuration));
         visibleTextEditor.setDecorations(decorationType, decorationOptions);
     }
 }
 
-function createDecorationOptions(decoration: Decoration): vscode.DecorationOptions {
-    const textDecoration = decoration.isWarning ? undefined : `none; opacity: 0.5`;
-    const color = decoration.isWarning === true ? '#FF2400' : undefined;
+function createDecorationOptions(decoration: Decoration, configuration: Configuration): vscode.DecorationOptions {
+    const textDecoration = decoration.isWarning ? undefined : `none; opacity: ${configuration.decorationStyle.opacity}`;
+    const color = decoration.isWarning === true
+        ? configuration.decorationStyle.warnColor
+        : configuration.decorationStyle.color;
     const startPosition = mapServicePosition(decoration.startPosition);
     const endPosition = mapServicePosition(decoration.endPosition);
     return {
