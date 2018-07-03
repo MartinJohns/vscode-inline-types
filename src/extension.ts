@@ -110,5 +110,5 @@ function normalizeFileName(fileName: string): string {
 }
 
 function isTypeScript(value: vscode.TextEditor): boolean {
-    return value.document.languageId === 'typescript';
+    return value.document.languageId === 'typescript' || value.document.languageId === 'typescriptreact';
 }
