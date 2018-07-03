@@ -3,7 +3,7 @@
   "description": "A Visual Studio Code extension to render inferred types in TypeScript documents.",
   "author": "Martin Johns",
   "license": "MIT",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "MartinJohns",
   "engines": {
     "vscode": "^1.20.0"

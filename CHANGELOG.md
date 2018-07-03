@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.3.0"></a>
+# [0.3.0](https://github.com/MartinJohns/vscode-inline-types/compare/v0.2.0...v0.3.0) (2018-07-03)
+
+
+### Features
+
+* add configuration for styling the decorations ([650f728](https://github.com/MartinJohns/vscode-inline-types/commit/650f728)), closes [#14](https://github.com/MartinJohns/vscode-inline-types/issues/14)
+* don't add decoration for arrow function variables ([3eee520](https://github.com/MartinJohns/vscode-inline-types/commit/3eee520)), closes [#15](https://github.com/MartinJohns/vscode-inline-types/issues/15)
+* support paraterName for class constructor ([#11](https://github.com/MartinJohns/vscode-inline-types/issues/11)) ([93276ae](https://github.com/MartinJohns/vscode-inline-types/commit/93276ae))
+* support tsx ([#19](https://github.com/MartinJohns/vscode-inline-types/issues/19)) ([955bf20](https://github.com/MartinJohns/vscode-inline-types/commit/955bf20)), closes [#13](https://github.com/MartinJohns/vscode-inline-types/issues/13)
+
+
+
 <a name="0.2.0"></a>
 # [0.2.0](https://github.com/MartinJohns/vscode-inline-types/compare/v0.1.0...v0.2.0) (2018-04-08)
 
