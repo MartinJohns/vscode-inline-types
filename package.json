@@ -24,15 +24,14 @@
     "release": "standard-version"
   },
   "dependencies": {
-    "chalk": "2.3.2",
+    "chalk": "2.4.1",
     "typescript": "2.8.1",
-    "vscode": "1.1.14"
+    "vscode": "1.1.18"
   },
   "devDependencies": {
-    "@types/chalk": "2.2.0",
     "@types/node": "9.6.1",
     "cz-conventional-changelog": "2.1.0",
-    "standard-version": "4.3.0",
+    "standard-version": "4.4.0",
     "vsce": "1.37.6"
   },
   "repository": {
