@@ -32,6 +32,7 @@ export interface Service {
 
 export type FeatureType =
     | 'variableType'
+    | 'arrowFunctionVariable'
     | 'functionReturnType'
     | 'functionParameterType'
     | 'propertyType'

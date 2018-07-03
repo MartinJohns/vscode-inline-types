@@ -107,10 +107,16 @@ function getDecorations(
     return result;
 
     function aux(node: ts.Node): void {
-        if (ts.isVariableDeclaration(node) && !node.type && context.configuration.features.variableType) {
-            result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name))
+        if (ts.isVariableDeclaration(node) && !node.type) {
+            const isArrowFunction = node.initializer && ts.isArrowFunction(node.initializer);
+            const shouldAddDecoration = isArrowFunction
+                ? context.configuration.features.arrowFunctionVariable
+                : context.configuration.features.variableType;
+            if (shouldAddDecoration) {
+                result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name));
+            }
         } else if (ts.isPropertySignature(node) && !node.type && context.configuration.features.propertyType) {
-            result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name))
+            result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name));
         } else if (ts.isParameter(node) && !node.type && context.configuration.features.functionParameterType) {
             result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name))
         } else if (ts.isFunctionDeclaration(node) && !node.type && context.configuration.features.functionReturnType) {

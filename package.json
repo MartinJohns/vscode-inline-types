@@ -56,7 +56,12 @@
         "inlineTypes.features.variableType": {
           "type": "boolean",
           "default": true,
-          "description": "Render the type of variables."
+          "description": "Render the type of variables (unless they're arrow functions)."
+        },
+        "inlineTypes.features.arrowFunctionVariable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Render the type of variables even when they're arrow functions."
         },
         "inlineTypes.features.functionReturnType": {
           "type": "boolean",
