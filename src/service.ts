@@ -1,8 +1,9 @@
 import * as ts from 'typescript';
+import * as vscode from 'vscode';
 import { join as joinPath } from 'path';
 
 import { throwError, isUndefined, assertNever, curry, isRestParameter } from './utils';
-import { error as logError, info as logInfo } from './log';
+import { error as logError } from './log';
 import { TextChange, Service, FileChangeType, FileChangeTypes, Decoration, Position, Configuration } from './types';
 
 class SourceFilesCache extends Map<string, ts.SourceFile> {
@@ -103,54 +104,118 @@ function getDecorations(
     const typeChecker = context.getTypeChecker();
     const configuration = context.configuration;
     const result: Decoration[] = [];
+    const skipTypes = new WeakSet<ts.Node>();
     aux(sourceFile);
     return result;
 
     function aux(node: ts.Node): void {
-        if (ts.isVariableDeclaration(node) && !node.type) {
-            const isArrowFunction = node.initializer && ts.isArrowFunction(node.initializer);
-            const shouldAddDecoration = isArrowFunction
-                ? context.configuration.features.arrowFunctionVariable
-                : context.configuration.features.variableType;
-            if (shouldAddDecoration) {
-                result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name));
-            }
-        } else if (ts.isPropertySignature(node) && !node.type && context.configuration.features.propertyType) {
-            result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name));
-        } else if (ts.isParameter(node) && !node.type && context.configuration.features.functionParameterType) {
-            result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name))
-        } else if (ts.isFunctionDeclaration(node) && !node.type && context.configuration.features.functionReturnType) {
-            const signature = typeChecker.getSignatureFromDeclaration(node);
-            result.push(getDecoration(sourceFile!, typeChecker, configuration, node, node.body, signature && signature.getReturnType()));
-        } else if (ts.isMethodDeclaration(node) && !node.type && context.configuration.features.functionReturnType) {
-            const signature = typeChecker.getSignatureFromDeclaration(node);
-            result.push(getDecoration(sourceFile!, typeChecker, configuration, node, node.body, signature && signature.getReturnType()));
-        } else if (ts.isArrowFunction(node) && !node.type && context.configuration.features.functionReturnType) {
-            const signature = typeChecker.getSignatureFromDeclaration(node);
-            result.push(getDecoration(sourceFile!, typeChecker, configuration, node, node.equalsGreaterThanToken, signature && signature.getReturnType(), true));
-        } else if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && node.arguments && node.arguments.length > 0 && context.configuration.features.parameterName) {
-            const resolvedSignature = typeChecker.getResolvedSignature(node);
-            for (let i = 0; i < node.arguments.length; ++i) {
-                const argument = node.arguments[i];
-                const parameter = resolvedSignature.parameters[i];
-                if (parameter) {
-                    const parameterName = (isRestParameter(parameter) ? '...' : '') + parameter.name;
-                    if (parameterName !== argument.getText()) {
-                        result.push({
-                            textBefore: `${parameterName}: `,
-                            textAfter: '',
-                            startPosition: sourceFile!.getLineAndCharacterOfPosition(argument.pos + argument.getLeadingTriviaWidth()),
-                            endPosition: sourceFile!.getLineAndCharacterOfPosition(argument.end),
-                            isWarning: false
+        node.forEachChild(aux);
+
+        if(skipTypes.has(node)) return;
+
+        try {
+            if (ts.isVariableDeclaration(node) && !node.type) {
+                const isFunction = node.initializer && ts.isFunctionLike(node.initializer);
+                const shouldAddDecoration = isFunction
+                    ? context.configuration.features.functionVariableType
+                    : context.configuration.features.variableType;
+                if (shouldAddDecoration) {
+                    result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name));
+                }
+            } else if (ts.isPropertySignature(node) && !node.type && context.configuration.features.propertyType) {
+                result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name))
+            } else if (ts.isParameter(node) && !node.type && context.configuration.features.functionParameterType) {
+                result.push(getDecoration(sourceFile!, typeChecker, configuration, node.name))
+            } else if (ts.isFunctionDeclaration(node) && !node.type && context.configuration.features.functionReturnType) {
+                const signature = typeChecker.getSignatureFromDeclaration(node);
+                result.push(getDecoration(sourceFile!, typeChecker, configuration, node, node.body, signature && signature.getReturnType(), false, false));
+            } else if (ts.isMethodDeclaration(node) && !node.type && context.configuration.features.functionReturnType) {
+                const signature = typeChecker.getSignatureFromDeclaration(node);
+                result.push(getDecoration(sourceFile!, typeChecker, configuration, node, node.body, signature && signature.getReturnType(), false, false));
+            } else if (ts.isArrowFunction(node) && !node.type && context.configuration.features.functionReturnType) {
+                const signature = typeChecker.getSignatureFromDeclaration(node);
+                const returnsFunction = ts.isFunctionLike(node.body);
+                if (!returnsFunction) {
+                    result.push(getDecoration(sourceFile!, typeChecker, configuration, node, node.equalsGreaterThanToken, signature && signature.getReturnType(), node.parameters.length === 1, false));
+                }
+            } else if (ts.isObjectBindingPattern(node) && context.configuration.features.objectPatternType) {
+                node.forEachChild(child => {
+                    if(skipTypes.has(child)) return;
+                    if (ts.isBindingElement(child)) {
+                        result.push(getDecoration(sourceFile!, typeChecker, configuration, child));
+                    }
+                });
+                if (node.parent) skipTypes.add(node.parent);
+            } else if (ts.isArrayBindingPattern(node) && context.configuration.features.arrayPatternType) {
+                node.forEachChild(child => {
+                    if(skipTypes.has(child)) return;
+                    if (ts.isBindingElement(child)) {
+                        result.push(getDecoration(sourceFile!, typeChecker, configuration, child));
+                    }
+                });
+                if (node.parent) skipTypes.add(node.parent);
+            } else if (ts.isObjectLiteralExpression(node) && context.configuration.features.objectLiteralType) {
+                let current = node.parent;
+                if (current && ts.isParenthesizedExpression(current))
+                    current = current.parent;
+                if (current && ts.isReturnStatement(current))
+                    current = current.parent;
+                while(current && (
+                    ts.isBlock(current) ||
+                    ts.isIfStatement(current)
+                )) current = current.parent;
+                if (current &&  ts.isFunctionLike(current)) {
+                    const signature = typeChecker.getSignatureFromDeclaration(current);
+                    if(signature) {
+                        const returnObject = signature.getReturnType();
+                        let numberOfTypes = 0;
+                        node.forEachChild(child => {
+                            if ((
+                                ts.isPropertyAssignment(child) ||
+                                ts.isShorthandPropertyAssignment(child)
+                             ) && ts.isIdentifier(child.name)) {
+                                const symbol = returnObject.getProperty(child.name.text);
+                                if (symbol && symbol.valueDeclaration) {
+                                    numberOfTypes++;
+                                    const type = typeChecker.getTypeAtLocation(symbol.valueDeclaration);
+                                    if (type) {
+                                        result.push(getDecoration(sourceFile!, typeChecker, configuration, child.name, undefined, type));
+                                    }
+                                }
+                            }
                         });
+                        if (current && numberOfTypes > 0 && numberOfTypes === returnObject.getProperties().length) skipTypes.add(current);
+                    }
+                }
+            } else if ((ts.isCallExpression(node) || ts.isNewExpression(node)) && node.arguments && node.arguments.length > 0 && context.configuration.features.parameterName) {
+                const resolvedSignature = typeChecker.getResolvedSignature(node);
+                if (resolvedSignature) {
+                    for (let i = 0; i < node.arguments.length; ++i) {
+                        const argument = node.arguments[i];
+                        const parameter = resolvedSignature.parameters[i];
+                        if (parameter) {
+                            const parameterName = (isRestParameter(parameter) ? '...' : '') + parameter.name;
+                            if (parameterName !== argument.getText()) {
+                                result.push({
+                                    textBefore: `${parameterName}: `,
+                                    textAfter: '',
+                                    startPosition: sourceFile!.getLineAndCharacterOfPosition(argument.pos + argument.getLeadingTriviaWidth()),
+                                    endPosition: sourceFile!.getLineAndCharacterOfPosition(argument.end),
+                                    isWarning: false
+                                });
+                            }
+                        }
                     }
                 }
             }
+        } catch(e) {
+            logError(e.message);
         }
-
-        node.forEachChild(aux);
     }
 }
+
+const typeNameCache = new WeakMap<ts.Type, string>();
+const longTypeNameCache = new WeakMap<ts.Type, string>();
 
 function getDecoration(
     sourceFile: ts.SourceFile,
@@ -159,18 +224,47 @@ function getDecoration(
     node: ts.Node,
     endNode: ts.Node | undefined = undefined,
     type: ts.Type = typeChecker.getTypeAtLocation(node),
-    wrap: boolean = false
+    wrap: boolean = false,
+    hover: boolean = true
 ): Decoration {
-    const typeName = typeChecker.typeToString(type, node.parent, ts.TypeFormatFlags.UseFullyQualifiedType);
+    let typeName = typeNameCache.get(type);
+    if (typeName === undefined) {
+        typeName = typeChecker.typeToString(
+            type,
+            node.parent,
+            ts.TypeFormatFlags.WriteArrowStyleSignature |
+            ts.TypeFormatFlags.UseAliasDefinedOutsideCurrentScope
+        );
+        typeNameCache.set(type, typeName);
+    }
+    let longTypeName = longTypeNameCache.get(type);
+    if (longTypeName === undefined) {
+        longTypeName = typeChecker.typeToString(
+            type,
+            node.parent, 
+            ts.TypeFormatFlags.UseFullyQualifiedType |
+            ts.TypeFormatFlags.NoTruncation |
+            ts.TypeFormatFlags.UseStructuralFallback |
+            ts.TypeFormatFlags.AllowUniqueESSymbolType |
+            ts.TypeFormatFlags.WriteArrowStyleSignature |
+            ts.TypeFormatFlags.WriteTypeArgumentsOfSignature
+        ).replace(/;(\s(?=\s*\}))?/g, ";\n");
+        longTypeNameCache.set(type, longTypeName);
+    }
     const leadingTriviaWidth = node.getLeadingTriviaWidth();
 
     const textBefore = wrap ? '(' : '';
     const textAfter = (wrap ? ')' : '') + ': ' + typeName;
+    let hoverMessage = undefined;
+    if (longTypeName !== typeName && hover) {
+        hoverMessage = new vscode.MarkdownString();
+        hoverMessage.appendCodeblock(longTypeName, "typescript");
+    }
     const startPosition = sourceFile.getLineAndCharacterOfPosition(node.pos + leadingTriviaWidth);
     const endPosition = sourceFile.getLineAndCharacterOfPosition(endNode ? endNode.pos : node.end);
-    const isWarning = configuration.features.highlightAny && typeName === 'any';
+    const isWarning = configuration.features.highlightAny && /\bany\b/.test(typeName);
 
-    return { textBefore, textAfter, startPosition, endPosition, isWarning };
+    return { textBefore, textAfter, hoverMessage, startPosition, endPosition, isWarning };
 }
 
 function notifyDocumentChange(
@@ -184,9 +278,15 @@ function notifyDocumentChange(
         return;
     }
 
-    const newSourceFile = textChanges.reduce(updateSourceFile, cachedSourceFile);
-    if (newSourceFile !== cachedSourceFile) {
-        context.sourceFilesCache.set(fileName, newSourceFile);
+    try {
+        const newSourceFile = textChanges.reduce(updateSourceFile, cachedSourceFile);
+        if (newSourceFile !== cachedSourceFile) {
+            context.sourceFilesCache.set(fileName, newSourceFile);
+            context.updateProgram();
+        }
+    } catch(e) {
+        logError(e.message);
+        context.sourceFilesCache.delete(fileName);
         context.updateProgram();
     }
 }
@@ -196,8 +296,6 @@ function notifyFileChange(
     fileName: string,
     fileChangeType: FileChangeType
 ): void {
-    logInfo(`File ${fileChangeType.toLowerCase()}: ${fileName}`);
-
     switch (fileChangeType) {
         case FileChangeTypes.Created:
             const isNewRootFile = getParsedCommandLine(context.rootPath).fileNames.some(rootFile => rootFile === fileName);
