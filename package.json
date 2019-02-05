@@ -6,16 +6,18 @@
   "version": "0.3.0",
   "publisher": "MartinJohns",
   "engines": {
-    "vscode": "^1.20.0"
+    "vscode": "^1.22.0"
   },
   "activationEvents": [
     "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
     "onLanguage:typescriptreact"
   ],
   "main": "./out/src/extension",
   "scripts": {
     "vscode:prepublish": "npm run clean && npm install && npm run compile",
-    "clean": "rm -rf out/ node_modules/ *.vsix",
+    "clean": "rimraf out/ *.vsix",
     "compile": "tsc -p ./",
     "watch": "tsc -w -p ./",
     "update-vscode": "node ./node_modules/vscode/bin/install",
@@ -24,15 +26,17 @@
     "release": "standard-version"
   },
   "dependencies": {
-    "chalk": "2.4.1",
-    "typescript": "2.8.1",
-    "vscode": "1.1.18"
+    "chalk": "^2.4.2",
+    "typescript": "^3.3.1",
+    "vscode": "^1.1.28"
   },
   "devDependencies": {
-    "@types/node": "9.6.1",
-    "cz-conventional-changelog": "2.1.0",
-    "standard-version": "4.4.0",
-    "vsce": "1.37.6"
+    "@types/chalk": "^2.2.0",
+    "@types/node": "^10.12.21",
+    "cz-conventional-changelog": "^2.1.0",
+    "rimraf": "^2.6.3",
+    "standard-version": "^4.4.0",
+    "vsce": "^1.55.0"
   },
   "repository": {
     "type": "git",
@@ -56,12 +60,12 @@
         "inlineTypes.features.variableType": {
           "type": "boolean",
           "default": true,
-          "description": "Render the type of variables (unless they're arrow functions)."
+          "description": "Render the type of variables (unless they're functions)."
         },
-        "inlineTypes.features.arrowFunctionVariable": {
+        "inlineTypes.features.functionVariableType": {
           "type": "boolean",
           "default": false,
-          "description": "Render the type of variables even when they're arrow functions."
+          "description": "Render the type of variables even when they're functions."
         },
         "inlineTypes.features.functionReturnType": {
           "type": "boolean",
@@ -77,6 +81,21 @@
           "type": "boolean",
           "default": true,
           "description": "Render the type of properties."
+        },
+        "inlineTypes.features.objectPatternType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render the type of properties in object pattern."
+        },
+        "inlineTypes.features.arrayPatternType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render the type of items in array pattern."
+        },
+        "inlineTypes.features.objectLiteralType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render the type of items in object literals."
         },
         "inlineTypes.features.parameterName": {
           "type": "boolean",
@@ -94,25 +113,35 @@
           "minimum": 0,
           "description": "A delay for propagating decoration updates to the editor in milliseconds."
         },
-        "inlineTypes.decorationStyle": {
-          "type": "object",
-          "description": "Style used for the decorations.",
-          "properties": {
-            "opacity": {
-              "type": "number",
-              "description": "Opacity used for the decoration.",
-              "default": 0.5
-            },
-            "color": {
-              "type": "string",
-              "description": "The color used for the decoration."
-            },
-            "warnColor": {
-              "type": "string",
-              "description": "The color used for warning decorations.",
-              "default": "#FF2400"
-            }
-          }
+        "inlineTypes.lightThemeDecorationStyle.opacity": {
+          "type": "number",
+          "description": "Opacity used for the decoration in light theme.",
+          "default": 0.5
+        },
+        "inlineTypes.lightThemeDecorationStyle.color": {
+          "type": "string",
+          "description": "The color used for the decoration in light theme.",
+          "default": "black"
+        },
+        "inlineTypes.lightThemeDecorationStyle.warnColor": {
+          "type": "string",
+          "description": "The color used for warning decorations in light theme.",
+          "default": "#FF2400"
+        },
+        "inlineTypes.darkThemeDecorationStyle.opacity": {
+          "type": "number",
+          "description": "Opacity used for the decoration in dark theme.",
+          "default": 0.5
+        },
+        "inlineTypes.darkThemeDecorationStyle.color": {
+          "type": "string",
+          "description": "The color used for the decoration in dark theme.",
+          "default": "white"
+        },
+        "inlineTypes.darkThemeDecorationStyle.warnColor": {
+          "type": "string",
+          "description": "The color used for warning decorations in dark theme.",
+          "default": "#FF2400"
         }
       }
     }

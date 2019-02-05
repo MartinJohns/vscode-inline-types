@@ -1,3 +1,5 @@
+import * as vscode from "vscode";
+
 export interface Position {
     readonly line: number;
     readonly character: number;
@@ -6,6 +8,7 @@ export interface Position {
 export interface Decoration {
     readonly textBefore: string;
     readonly textAfter: string;
+    readonly hoverMessage?: vscode.MarkdownString | vscode.MarkdownString[];
     readonly startPosition: Position;
     readonly endPosition: Position;
     readonly isWarning: boolean;
@@ -32,17 +35,21 @@ export interface Service {
 
 export type FeatureType =
     | 'variableType'
-    | 'arrowFunctionVariable'
+    | 'functionVariableType'
     | 'functionReturnType'
     | 'functionParameterType'
     | 'propertyType'
+    | 'objectPatternType'
+    | 'arrayPatternType'
+    | 'objectLiteralType'
     | 'parameterName'
     | 'highlightAny'
 
 export interface Configuration {
     readonly features: { readonly [P in FeatureType]: boolean };
     readonly updateDelay: number;
-    readonly decorationStyle: DecorationStyle;
+    readonly lightThemeDecorationStyle: DecorationStyle;
+    readonly darkThemeDecorationStyle: DecorationStyle;
 }
 
 export interface DecorationStyle {

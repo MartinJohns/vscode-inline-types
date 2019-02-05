@@ -1,4 +1,7 @@
 .vscode/
-tsconfig.json
-**/*.ts
+src
+assets
 out/*.js.map
+tsconfig.json
+*.vsix
+CHANGELOG.md

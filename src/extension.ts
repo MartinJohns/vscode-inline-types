@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { error as logError, info as logInfo } from './log';
+import { error as logError } from './log';
 import { createService } from './service';
 import { FileChangeTypes, Decoration, TextChange, Position, Service, Configuration, Disposable } from './types';
 
@@ -13,7 +13,7 @@ export function activate(extensionContext: vscode.ExtensionContext): void {
 
     const subscriptions: Disposable[] = [];
     function dispose(): void {
-        let nextSubscription: Disposable | undefined;;
+        let nextSubscription: Disposable | undefined;
         while ((nextSubscription = subscriptions.pop()) !== undefined) {
             nextSubscription.dispose();
         }
@@ -43,7 +43,7 @@ function createServiceForExtension(
         () => updateDecorations(decorationType, service, configuration));
     updateDecorations(decorationType, service, configuration);
 
-    const fileWatcher = vscode.workspace.createFileSystemWatcher('{!node_modules,**}/*.ts');
+    const fileWatcher = vscode.workspace.createFileSystemWatcher('{!node_modules,**}/*.{ts,js,tsx,jsx}');
     fileWatcher.onDidCreate(e => service.notifyFileChange(normalizeFileName(e.fsPath), FileChangeTypes.Created));
     fileWatcher.onDidChange(e => service.notifyFileChange(normalizeFileName(e.fsPath), FileChangeTypes.Changed));
     fileWatcher.onDidDelete(e => service.notifyFileChange(normalizeFileName(e.fsPath), FileChangeTypes.Deleted));
@@ -61,7 +61,8 @@ function mapConfiguration(configuration: vscode.WorkspaceConfiguration): Configu
     return {
         features: configuration.features,
         updateDelay: configuration.updateDelay,
-        decorationStyle: configuration.decorationStyle
+        lightThemeDecorationStyle: configuration.lightThemeDecorationStyle,
+        darkThemeDecorationStyle: configuration.darkThemeDecorationStyle
     };
 }
 
@@ -70,31 +71,61 @@ function updateDecorations(
     service: Service,
     configuration: Configuration
 ): void {
-    const visibleTextEditors = vscode.window.visibleTextEditors.filter(isTypeScript);
+    const visibleTextEditors = vscode.window.visibleTextEditors.filter(isSupportedLanguage);
     for (const visibleTextEditor of visibleTextEditors) {
-        logInfo(`Updating decorations: ${visibleTextEditor.document.fileName}`);
-
         const fileName = visibleTextEditor.document.fileName;
         const decorations = service.getDecorations(normalizeFileName(fileName));
-        const decorationOptions = decorations.map(d => createDecorationOptions(d, configuration));
+        const decorationOptions = decorations.reduce<vscode.DecorationOptions[]>((arr, d) => arr.concat(createDecorationOptions(d, configuration)), []);
         visibleTextEditor.setDecorations(decorationType, decorationOptions);
     }
 }
 
-function createDecorationOptions(decoration: Decoration, configuration: Configuration): vscode.DecorationOptions {
-    const textDecoration = decoration.isWarning ? undefined : `none; opacity: ${configuration.decorationStyle.opacity}`;
-    const color = decoration.isWarning === true
-        ? configuration.decorationStyle.warnColor
-        : configuration.decorationStyle.color;
+function createDecorationOptions(decoration: Decoration, configuration: Configuration): vscode.DecorationOptions[] {
+    const lightThemeTextDecoration = decoration.isWarning ? undefined : `none; opacity: ${configuration.lightThemeDecorationStyle.opacity}`;
+    const darkThemeTextDecoration = decoration.isWarning ? undefined : `none; opacity: ${configuration.darkThemeDecorationStyle.opacity}`;
+    const lightThemeColor = decoration.isWarning === true
+        ? configuration.lightThemeDecorationStyle.warnColor
+        : configuration.lightThemeDecorationStyle.color;
+    const darkThemeColor = decoration.isWarning === true
+        ? configuration.darkThemeDecorationStyle.warnColor
+        : configuration.darkThemeDecorationStyle.color;
     const startPosition = mapServicePosition(decoration.startPosition);
     const endPosition = mapServicePosition(decoration.endPosition);
-    return {
-        range: new vscode.Range(startPosition, endPosition),
-        renderOptions: {
-            before: { contentText: decoration.textBefore, textDecoration, color },
-            after: { contentText: decoration.textAfter, textDecoration, color }
-        }
-    };
+    const nextEndPosition = mapServicePosition(decoration.endPosition, 1);
+    const decos: vscode.DecorationOptions[] = [];
+    if (decoration.hoverMessage) {
+        decos.push({
+            range: new vscode.Range(startPosition, endPosition),
+            hoverMessage: decoration.hoverMessage
+        });
+    }
+    if (decoration.textBefore) {
+        decos.push({
+            range: new vscode.Range(startPosition, endPosition),
+            renderOptions: {
+                light: {
+                    before: { contentText: decoration.textBefore, textDecoration: lightThemeTextDecoration, color: lightThemeColor },
+                },
+                dark: {
+                    before: { contentText: decoration.textBefore, textDecoration: darkThemeTextDecoration, color: darkThemeColor },
+                }
+            }
+        });
+    }
+    if (decoration.textAfter) {
+        decos.push({
+            range: new vscode.Range(endPosition, nextEndPosition),
+            renderOptions: {
+                light: {
+                    before: { contentText: decoration.textAfter, textDecoration: lightThemeTextDecoration, color: lightThemeColor },
+                },
+                dark: {
+                    before: { contentText: decoration.textAfter, textDecoration: darkThemeTextDecoration, color: darkThemeColor },
+                }
+            }
+        });
+    }
+    return decos;
 }
 
 function mapContentChange(contentChange: vscode.TextDocumentContentChangeEvent): TextChange {
@@ -105,14 +136,16 @@ function mapContentChange(contentChange: vscode.TextDocumentContentChangeEvent):
     };
 }
 
-function mapServicePosition(position: Position): vscode.Position {
-    return new vscode.Position(position.line, position.character);
+function mapServicePosition(position: Position, offset: number = 0): vscode.Position {
+    return new vscode.Position(position.line, position.character + offset);
 }
 
 function normalizeFileName(fileName: string): string {
     return fileName.replace(/\\/g, '/');
 }
 
-function isTypeScript(value: vscode.TextEditor): boolean {
-    return value.document.languageId === 'typescript' || value.document.languageId === 'typescriptreact';
+const SUPPORTED_LANGUAGES = ['typescript', 'javascript', 'javascriptreact', 'typescriptreact'];
+
+function isSupportedLanguage(value: vscode.TextEditor): boolean {
+    return SUPPORTED_LANGUAGES.includes(value.document.languageId);
 }
